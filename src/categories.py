@@ -12,7 +12,7 @@ Class w_string
      --------------- 
 """
 
-WTHRESHOLD = 2 
+WTHRESHOLD = 1 
 
 class w_string:
       def __init__(self):
@@ -51,7 +51,6 @@ class Categories :
         self.dbman = dbmanager.DBManager("categories", ["category","desc","weight"])
         saved_categories = self.dbman.get_all()
         self.load_from_db(saved_categories)
-        self.print()
 
     #Loads saved categories into memory 
     def load_from_db(self,saved_categories):
@@ -72,13 +71,17 @@ class Categories :
     #param self
     #param list of dict 
     def categorize(self,data):
+        a = m = 0.0
         for d in data:
             c = self.get(d["Description"]) 
             if c :
+                a += 1
                 self.add(c,d["Description"])
             else :
+                m += 1
                 c = self.prompt_user("What is this %s ? " % d["Description"] ) 
                 self.add(c,d["Description"])
+        print( "Sucess rate %" + str((a/(a +m ))*100))
         self.load_to_db()
 
     def add(self,category,phrase):
@@ -107,7 +110,6 @@ class Categories :
   
     def prompt_user(self,msg):
         resp = input(msg)
-        self.print()
         return resp
 
     #Needs work

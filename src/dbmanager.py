@@ -3,7 +3,7 @@ from env import DATABASEPATH
 
 class DBManager:
      
-    def __init__(self,tablename, columns):
+    def __init__(self,tablename, columns,constraints=[]):
         #Connect to database
         self.tablename = tablename
         self.columns = columns
@@ -11,11 +11,7 @@ class DBManager:
         self.cur = self.con.cursor()
         
         #Construct query strings
-        self.create_str = "CREATE TABLE %s ("+ ', '.join([ '%s' for x in range(len(columns))])  + ")"
-        self.insert_str = "INSERT INTO " + tablename + " VALUES ("+ ",".join([ "?" for x in range(len(columns))])  + ")"
-        self.get_str    = "SELECT * FROM " + tablename + " WHERE %s=?"
-        self.get_all_str= "SELECT * FROM " + tablename
-        #update_str = "UPDATE" + table_name + " ? 
+        self._construct_queries()
         
         #If table exists use previous table if not create new one
         try:
@@ -30,6 +26,7 @@ class DBManager:
    
     def create_table(self,tablename,columns):
         print(self.create_str)
+        columns_with_constraints = [ c +  ]
         cmdstr =  self.create_str % tuple([tablename] + columns ) 
         self.cur.execute(cmdstr)
 
@@ -70,6 +67,14 @@ class DBManager:
         except sqlite3.Error as E:
             print("DBManager get sqlite error:" + str(E))
         
+    def _construct_queries(self):
+        values = ', '.join([ '%s' for x in range(len(self.columns))])
+        self.create_str = "CREATE TABLE %s ("+ values  + ")"
+        self.insert_str = "INSERT INTO "   + self.tablename + " VALUES ("+ values  + ")"
+        self.get_str    = "SELECT * FROM " + self.tablename + " WHERE %s=?"
+        self.get_all_str= "SELECT * FROM " + self.tablename
+        #update_str = "UPDATE" + table_name + " ? 
+
 
 if __name__ == "__main__":
     #Do the tests
