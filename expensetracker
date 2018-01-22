@@ -40,7 +40,7 @@ if __name__ == "__main__":
    b = Budget()
 
    #do argument parsing
-   parser = argparse.ArgumentParser(description='Record Personal Fiances')
+   parser = argparse.ArgumentParser(description='Record and Categorize Expenses')
    parser.add_argument('action', help='show, add, delete')
    parser.add_argument('transaction', nargs='?', help='Object to add')
    parser.add_argument('--f')

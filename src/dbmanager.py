@@ -24,6 +24,7 @@ class DBManager:
             self.create_table(tablename,columns)
        
     def __del__(self):
+        self.con.commit()
         self.con.close()
 
    

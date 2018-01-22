@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import dbmanager
 """
 Class w_string
      Is a weighted string based on confirmation of category
@@ -45,15 +46,27 @@ Data Structure:
     table is a -> {"category key" : [w_string]} 
 """
 class Categories :
-    self.table = {}
+    table = {}
     def __init__(self):
-        self.dbman = dbmanager.DBManager("categories", [])
-        saved_catgories = self.db_man.get_all()
-        self.load_table(saved_categories)
+        self.dbman = dbmanager.DBManager("categories", ["category","desc","weight"])
+        saved_categories = self.dbman.get_all()
+        self.load_from_db(saved_categories)
+        self.print()
 
-    def load_table(self,
+    #Loads saved categories into memory 
+    def load_from_db(self,saved_categories):
+        for s in saved_categories:
+            ws = w_string(s["desc"],s["weight"])
+            try:
+                 self.table[ s["category"] ].append(ws)
+            except KeyError:
+                 self.table[ s["category"]] = []
 
-
+    #Loads catgory table to database
+    def load_to_db(self):
+        for k,v in self.table.items():
+            for w in v:
+                self.dbman.insert([k,w.string, w.weight])
 
     #categorize(self,data)
     #param self
@@ -66,6 +79,7 @@ class Categories :
             else :
                 c = self.prompt_user("What is this %s ? " % d["Description"] ) 
                 self.add(c,d["Description"])
+        self.load_to_db()
 
     def add(self,category,phrase):
         w_phrase = [w_string(x,0) for x in phrase.split(' ')]
