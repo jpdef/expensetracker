@@ -48,24 +48,26 @@ Data Structure:
 class Categories :
     table = {}
     def __init__(self):
-        self.dbman = dbmanager.DBManager("categories", ["category","desc","weight"])
-        saved_categories = self.dbman.get_all()
+        self.dbman = dbmanager.DBManager()
+        self.dbman.create_table("categories", ["category","desc","weight"],["CONSTRAINT cat_desc PRIMARY KEY (category,desc)"])
+        saved_categories = self.dbman.get_all("categories")
         self.load_from_db(saved_categories)
 
     #Loads saved categories into memory 
     def load_from_db(self,saved_categories):
-        for s in saved_categories:
-            ws = w_string(s["desc"],s["weight"])
-            try:
-                 self.table[ s["category"] ].append(ws)
-            except KeyError:
-                 self.table[ s["category"]] = []
+        if saved_categories :
+           for s in saved_categories:
+               ws = w_string(s["desc"],s["weight"])
+               try:
+                    self.table[ s["category"] ].append(ws)
+               except KeyError:
+                    self.table[ s["category"]] = []
 
     #Loads catgory table to database
     def load_to_db(self):
         for k,v in self.table.items():
             for w in v:
-                self.dbman.insert([k,w.string, w.weight])
+                self.dbman.insert("categories",[k,w.string, w.weight])
 
     #categorize(self,data)
     #param self
@@ -165,3 +167,4 @@ if __name__ == "__main__":
     ss = "this"
     print("Categorize %s" % ss )
     print(ctgs.get(ss))
+    ctgs.load_to_db()

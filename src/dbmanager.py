@@ -1,88 +1,148 @@
 import sqlite3
-from env import DATABASEPATH
+import os
+
+class Table:
+    def __init__(self,tablename,dbman, columns):
+        self.columns = columns
+        self.tablename =  tablename
+        self._construct_queries()
+        self.dbman = dbman
+    
+    def _construct_queries(self):
+        names        = ', '.join([ ":"+c['name'] for c in self.columns])
+        placeholders = ', '.join([ '?' for x in range(len(self.columns))])
+        formatters   = ', '.join([ '%s' for x in range(len(self.columns))])
+        self.create_str = "CREATE TABLE %s ("+ formatters  + ")"
+        #self.upsert_str = "INSERT INTO "   + self.tablename + " VALUES ("+ placeholders  + ")" + "ON CONFLICT" + "DO UPDATE SET"
+        self.insert_str = "INSERT INTO "   + self.tablename + " VALUES ("+ names  + ")"
+        self.get_str    = "SELECT * FROM " + self.tablename + " WHERE %s"
+        self.get_all_str= "SELECT * FROM " + self.tablename
+        self.update_str = "UPDATE " + self.tablename + " SET {} WHERE {}" 
+    
+    def update(self,values, conditions):
+        column_str = ", ".join([k+"=:"+k for k in values.keys()])
+        condition_str = " and ".join([k+"=:"+k for k in conditions.keys()])
+        query = self.update_str.format( column_str, condition_str) 
+        print(query)
+        print({**values,**conditions})
+        self.dbman.execute(query, {**values,**conditions })
+
+   
+    def insert(self,row,unique=None):
+        if unique is not None:
+           filtered_row = {k:v for (k,v) in row.items() if k is not unique} 
+           if self.get(filtered_row):
+               self.update({unique: row[unique]},filtered_row)
+           else: 
+               self.dbman.execute(self.insert_str , row)
+        else:
+            self.dbman.execute(self.insert_str , row)
+
+
+    def get_all(self):
+        self.dbman.cur.execute(self.get_all_str)
+        data =  self.dbman.cur.fetchall()
+        return ( [ dict(zip([c['name'] for c in self.columns],d)) for d in data] )
+
+    def get(self,row):
+        column_name = row.keys()
+        query = self.get_str % " and ".join([cn+"=:"+cn for cn in column_name])
+        print(query)
+        self.dbman.execute(query, row )
+        return self.dbman.cur.fetchone()
 
 class DBManager:
-     
-    def __init__(self,tablename, columns,constraints=[]):
+    def __init__(self):
         #Connect to database
-        self.tablename = tablename
-        self.columns = columns
-        self.con = sqlite3.connect(DATABASEPATH)
+        self.con = sqlite3.connect(os.environ['DATABASEPATH'])
         self.cur = self.con.cursor()
         
-        #Construct query strings
-        self._construct_queries()
+        #Set fields
+        self.tables = {}
         
-        #If table exists use previous table if not create new one
-        try:
-            self.cur.execute('SELECT * FROM '  + tablename)
-        except sqlite3.Error as E:
-            self.create_table(tablename,columns)
        
     def __del__(self):
         self.con.commit()
         self.con.close()
 
-   
+    #TODO Check if table doesn't get created 
     def create_table(self,tablename,columns):
-        print(self.create_str)
-        columns_with_constraints = [ c +  ]
-        cmdstr =  self.create_str % tuple([tablename] + columns ) 
-        self.cur.execute(cmdstr)
+        self.tables[tablename] = Table(tablename,self,columns)
+        try:
+            #Make a table
+            cstr = self.tables[tablename].create_str
+            print(cstr)
+            cmdstr = cstr  % tuple([tablename] + [" ".join([c["name"],c["constraint"]]) for c in columns])
+            print(cmdstr)
+            self.cur.execute(cmdstr)
+        except sqlite3.Error as E:
+            print("DBManager get sqlite error:" + str(E))
 
+    def execute(self,query,args=None):
+        try:
+            if args is not None:
+                self.cur.execute(query,args)
+            else:
+                self.cur.execute(query)
+        except sqlite3.Error as E:
+            print("DBManager get sqlite error:" + str(E))
+    
     def load(self,data):
         pass
     
     def load_spreadsheet(self):
         pass
-
-    def insert(self,args):
+    
+    def insert(self,tablename,row,unique=None):
         try:
-            self.cur.execute(self.insert_str, tuple(args))
-        except sqlite3.Error as E:
-            print("DBManager insert sqlite error:" + str(E))
+           if tablename in self.tables.keys():
+              self.tables[tablename].insert(row,unique)
+           else:
+              print("No such tablename : %s" % tablename)
 
-    def update(self):
-        pass
-
-    def delete(self):
-        pass
-
-    def get_all(self):
-        try:
-            self.cur.execute(self.get_all_str)
-            data =  self.cur.fetchall()
-            return ( [ dict(zip(self.columns,d)) for d in data] )
         except sqlite3.Error as E:
             print("DBManager get sqlite error:" + str(E))
-            return []
 
-
-    def get(self,key,value):
+    def get(self,tablename,row):
         try:
-            query = self.get_str % key
-            print(query)
-            self.cur.execute(query, (value,))
-            return self.cur.fetchone()
+           if self.tables[tablename]:
+              return self.tables[tablename].get(row)
+           else:
+              print("No such tablename : %s" % tablename)
         except sqlite3.Error as E:
             print("DBManager get sqlite error:" + str(E))
+    
+    def get_all(self,tablename):
+        try:
+           if self.tables[tablename]:
+              return self.tables[tablename].get_all()
+           else:
+              print("No such tablename : %s" % tablename)
+        except sqlite3.Error as E:
+            print("DBManager get sqlite error:" + str(E))
+
         
-    def _construct_queries(self):
-        values = ', '.join([ '%s' for x in range(len(self.columns))])
-        self.create_str = "CREATE TABLE %s ("+ values  + ")"
-        self.insert_str = "INSERT INTO "   + self.tablename + " VALUES ("+ values  + ")"
-        self.get_str    = "SELECT * FROM " + self.tablename + " WHERE %s=?"
-        self.get_all_str= "SELECT * FROM " + self.tablename
-        #update_str = "UPDATE" + table_name + " ? 
 
 
 if __name__ == "__main__":
     #Do the tests
-    dbman = DBManager("transactions", ["date text", "category text","desc text"])
-    #dbman.insert(["2017-1-10","food","in-in-out"])
-    #dbman.insert(["2017-1-10","trans","oil"])
-    #dbman.insert(["2017-1-10","watch","expense"])
-    dbman.insert(["2017-1-10","PGE","utilities"])
-    print(dbman.get("category","food"))
-    print(dbman.get_all())
+    dbman = DBManager()
+    table_columns = [{ "name" : "id", 
+                       "type" : "int",
+                       "constraint" : "NOT NULL"}, 
+                     { "name" : "category", 
+                       "type" : "varchar(255)",
+                       "constraint" : ""},
+                     { "name" : "desc", 
+                       "type" : "varchar(255)",
+                       "constraint" : "NOT NULL UNIQUE"}]
+ 
+    dbman.create_table("transactions", table_columns)
+    dbman.insert("transactions",{"id" : 3, "category" : "food"       , "desc" : "in-in-out"})
+    dbman.insert("transactions",{"id" : 4, "category" : "food"       , "desc" : "in-in-out"},unique="id")
+    dbman.insert("transactions",{"id" : 4, "category" : "trans"      , "desc" : "oil"})
+    dbman.insert("transactions",{"id" : 5, "category" : "watch"      , "desc" : "expense"})
+    dbman.insert("transactions",{"id" : 1, "category" : "utilities"  , "desc" : "PGE"})
+    print(dbman.get("transactions",{"category" : "food", "id" : 2}))
+    print(dbman.get_all("transactions"))
 
