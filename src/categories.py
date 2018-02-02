@@ -49,7 +49,11 @@ class Categories :
     table = {}
     def __init__(self):
         self.dbman = dbmanager.DBManager()
-        self.dbman.create_table("categories", ["category","desc","weight"],["CONSTRAINT cat_desc PRIMARY KEY (category,desc)"])
+        self.dbman.create_table("categories",
+                                [{"name":"category"  , "type":"varchar(255)" , "constraint" : ""},
+                                 {"name":"desc"      , "type":"varchar(255)" , "constraint" : ""},
+                                 {"name":"weight"    , "type":"int"          , "constraint" : ""}]
+                                )
         saved_categories = self.dbman.get_all("categories")
         self.load_from_db(saved_categories)
 
@@ -67,7 +71,7 @@ class Categories :
     def load_to_db(self):
         for k,v in self.table.items():
             for w in v:
-                self.dbman.insert("categories",[k,w.string, w.weight])
+                self.dbman.insert("categories",{"category":k , "desc":w.string , "weight":w.weight},unique="weight")
 
     #categorize(self,data)
     #param self

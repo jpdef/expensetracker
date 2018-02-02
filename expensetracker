@@ -11,7 +11,10 @@ class Budget:
     def __init__(self):
         #Setup Database + Categories
         self.ctgs = categories.Categories()
-        self.dbman = dbmanager.DBManager("transactions", ["Trans Date", "Description","Amount"])
+        self.dbman = dbmanager.DBManager()
+        self.dbman.create_table("transactions", [{"name" : "Trans Date", "type" : "varchar(255)", "constraint" : ""}, 
+                                                 {"name" : "Description" ,"type" : "varchar(255)", "constraint" : ""},
+                                                 {"name" : "Amount"      ,"type" : "varchar(255)", "constraint" : ""}])
     
     def parse_csv(self,filename):
         data = []
