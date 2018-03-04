@@ -57,8 +57,11 @@ class DBManager:
         self.con = sqlite3.connect(os.environ['DATABASEPATH'])
         self.cur = self.con.cursor()
         
-        #Set fields
+        #Filling in existing tables 
         self.tables = {}
+        for t in self.get_tables():
+            columns = self.get_columns(t)
+            self.create_table(t,[{"name":c, "constraint": ""} for c in columns])
         
        
     def __del__(self):
@@ -78,6 +81,10 @@ class DBManager:
         self.cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
         return [x[0] for x in self.cur.fetchall()]
 
+    def get_columns(self,tablename):
+        self.cur.execute("PRAGMA table_info(%s);" % tablename)
+        return [x[1] for x in self.cur.fetchall()]
+ 
     def execute(self,query,args=None):
         try:
             if args is not None:
@@ -159,3 +166,4 @@ if __name__ == "__main__":
     dbman.tospreadsheet("transactions",os.path.join(os.path.dirname(os.environ['DATABASEPATH']),"test.csv"))
     """
     print(dbman.get_tables())
+    print(dbman.get_columns('transactions'))
