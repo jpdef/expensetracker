@@ -1,4 +1,4 @@
 # Webclassify
 Goal: Create programs that properly classifies data. Classifcation is initially defined by user input. Program uses initial input to predict future classifications. 
 
-Approach: Each input has an associated weight. The weight is a measurement of the the input data with itself classification. The program predicts the classifcation of new input use the previous weighted inputs.
+Approach: Each input has an associated weight. The weight is a measurement of the the input data with its classification. The program predicts the classifcation of new input use the previous weighted inputs.

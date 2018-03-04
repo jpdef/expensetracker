@@ -2,6 +2,7 @@ import sqlite3
 import os
 import sys
 import csv
+from src import utilities as utils
 
 class Table:
     def __init__(self,tablename,dbman, columns):
@@ -25,8 +26,8 @@ class Table:
         column_str = ", ".join([k+"=:"+k for k in values.keys()])
         condition_str = " and ".join([k+"=:"+k for k in conditions.keys()])
         query = self.update_str.format( column_str, condition_str) 
-        self.dbman.execute(query, {**values,**conditions })
-        #self.dbman.con.commit()
+        args = utils.merge_dicts(values,conditions)
+        self.dbman.execute(query, args)
    
     def insert(self,row,unique=None):
         if unique is not None:
@@ -37,7 +38,6 @@ class Table:
                self.dbman.execute(self.insert_str , row)
         else:
             self.dbman.execute(self.insert_str , row)
-            #self.dbman.con.commit()
 
 
     def get_all(self):
@@ -73,6 +73,10 @@ class DBManager:
             self.cur.execute(cmdstr)
         except sqlite3.Error as E:
             print("DBManager get sqlite error:" + str(E))
+
+    def get_tables(self):
+        self.cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        return [x[0] for x in self.cur.fetchall()]
 
     def execute(self,query,args=None):
         try:
@@ -133,6 +137,7 @@ class DBManager:
 if __name__ == "__main__":
     #Do the tests
     dbman = DBManager()
+    """"
     table_columns = [{ "name" : "id", 
                        "type" : "int",
                        "constraint" : "NOT NULL"}, 
@@ -152,4 +157,5 @@ if __name__ == "__main__":
     print(dbman.get("transactions",{"category" : "food", "id" : 2}))
     print(dbman.get_all("transactions"))
     dbman.tospreadsheet("transactions",os.path.join(os.path.dirname(os.environ['DATABASEPATH']),"test.csv"))
-
+    """
+    print(dbman.get_tables())
