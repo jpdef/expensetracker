@@ -1,5 +1,7 @@
 import sqlite3
 import os
+import sys
+import csv
 
 class Table:
     def __init__(self,tablename,dbman, columns):
@@ -13,20 +15,18 @@ class Table:
         placeholders = ', '.join([ '?' for x in range(len(self.columns))])
         formatters   = ', '.join([ '%s' for x in range(len(self.columns))])
         self.create_str = "CREATE TABLE %s ("+ formatters  + ")"
-        #self.upsert_str = "INSERT INTO "   + self.tablename + " VALUES ("+ placeholders  + ")" + "ON CONFLICT" + "DO UPDATE SET"
         self.insert_str = "INSERT INTO "   + self.tablename + " VALUES ("+ names  + ")"
         self.get_str    = "SELECT * FROM " + self.tablename + " WHERE %s"
         self.get_all_str= "SELECT * FROM " + self.tablename
         self.update_str = "UPDATE " + self.tablename + " SET {} WHERE {}" 
-    
+   
+
     def update(self,values, conditions):
         column_str = ", ".join([k+"=:"+k for k in values.keys()])
         condition_str = " and ".join([k+"=:"+k for k in conditions.keys()])
         query = self.update_str.format( column_str, condition_str) 
-        print(query)
-        print({**values,**conditions})
         self.dbman.execute(query, {**values,**conditions })
-
+        #self.dbman.con.commit()
    
     def insert(self,row,unique=None):
         if unique is not None:
@@ -37,6 +37,7 @@ class Table:
                self.dbman.execute(self.insert_str , row)
         else:
             self.dbman.execute(self.insert_str , row)
+            #self.dbman.con.commit()
 
 
     def get_all(self):
@@ -47,7 +48,6 @@ class Table:
     def get(self,row):
         column_name = row.keys()
         query = self.get_str % " and ".join([cn+"=:"+cn for cn in column_name])
-        print(query)
         self.dbman.execute(query, row )
         return self.dbman.cur.fetchone()
 
@@ -62,18 +62,14 @@ class DBManager:
         
        
     def __del__(self):
-        self.con.commit()
         self.con.close()
 
-    #TODO Check if table doesn't get created 
     def create_table(self,tablename,columns):
         self.tables[tablename] = Table(tablename,self,columns)
         try:
             #Make a table
             cstr = self.tables[tablename].create_str
-            print(cstr)
             cmdstr = cstr  % tuple([tablename] + [" ".join([c["name"],c["constraint"]]) for c in columns])
-            print(cmdstr)
             self.cur.execute(cmdstr)
         except sqlite3.Error as E:
             print("DBManager get sqlite error:" + str(E))
@@ -90,15 +86,26 @@ class DBManager:
     def load(self,data):
         pass
     
-    def load_spreadsheet(self):
-        pass
+    def tospreadsheet(self,tablename,filename):
+        if self.tables[tablename]:
+            data = self.get_all(tablename)
+            #write to file
+            with open(filename, 'w') as csvfile:
+                fieldnames = data[0].keys()
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                for d in data:
+                    writer.writerow(d)
+        else:
+            print("Could not find table in database")
     
     def insert(self,tablename,row,unique=None):
         try:
-           if tablename in self.tables.keys():
-              self.tables[tablename].insert(row,unique)
-           else:
-              print("No such tablename : %s" % tablename)
+            with self.con: 
+                if tablename in self.tables.keys():
+                    self.tables[tablename].insert(row,unique)
+                else:
+                    print("No such tablename : %s" % tablename)
 
         except sqlite3.Error as E:
             print("DBManager get sqlite error:" + str(E))
@@ -122,8 +129,7 @@ class DBManager:
             print("DBManager get sqlite error:" + str(E))
 
         
-
-
+#Tests
 if __name__ == "__main__":
     #Do the tests
     dbman = DBManager()
@@ -145,4 +151,5 @@ if __name__ == "__main__":
     dbman.insert("transactions",{"id" : 1, "category" : "utilities"  , "desc" : "PGE"})
     print(dbman.get("transactions",{"category" : "food", "id" : 2}))
     print(dbman.get_all("transactions"))
+    dbman.tospreadsheet("transactions",os.path.join(os.path.dirname(os.environ['DATABASEPATH']),"test.csv"))
 

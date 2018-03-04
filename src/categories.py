@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import dbmanager
+import utilities
+import copy
 """
 Class w_string
      Is a weighted string based on confirmation of category
@@ -12,7 +14,7 @@ Class w_string
      --------------- 
 """
 
-WTHRESHOLD = 1 
+WTHRESHOLD = 0 
 
 class w_string:
       def __init__(self):
@@ -32,6 +34,9 @@ class w_string:
       def __lt__(self,other):
           return not other.weight < self.weight
 
+      def __eq__(self,other):
+          return (self.string == other.string) and (self.weight == other.weight)
+
       def to_string(self):
           return self.string
 
@@ -47,6 +52,9 @@ Data Structure:
 """
 class Categories :
     table = {}
+    prev_table = {}
+    change_table = {}
+    hit = miss = 0.0
     def __init__(self):
         self.dbman = dbmanager.DBManager()
         self.dbman.create_table("categories",
@@ -56,52 +64,75 @@ class Categories :
                                 )
         saved_categories = self.dbman.get_all("categories")
         self.load_from_db(saved_categories)
-
+        self._sort()
+        self.prev_table = copy.deepcopy(self.table)
+        for k in self.table.keys():
+            self.change_table[k] = []   
+        self.print()
+   
+    def __del__(self):
+         if (self.hit + self.miss)  !=  0:
+             print( "Sucess rate %" + str((self.hit/(self.hit +self.miss ))*100))
+             self.load_to_db()
+    
     #Loads saved categories into memory 
     def load_from_db(self,saved_categories):
         if saved_categories :
            for s in saved_categories:
-               ws = w_string(s["desc"],s["weight"])
                try:
+                    ws = w_string(s["desc"],s["weight"])
                     self.table[ s["category"] ].append(ws)
                except KeyError:
                     self.table[ s["category"]] = []
 
     #Loads catgory table to database
     def load_to_db(self):
-        for k,v in self.table.items():
-            for w in v:
+        self.diff_table()
+        self.print() 
+        print(self.change_table)
+        for k,v in self.change_table.items():
+            for i,w in enumerate(v):
+                utilities.print_loading("Loading to db",i)
                 self.dbman.insert("categories",{"category":k , "desc":w.string , "weight":w.weight},unique="weight")
+   
+    def diff_table(self):
+        for k,v in self.table.items():
+            if k not in self.prev_table:
+                self.change_table[k] = self.table[k]
+            else:
+                print("{} {}".format(len(self.prev_table[k]),len(self.table[k])))
+                for i,w in enumerate(v):
+                    if i >= len(self.prev_table[k]):
+                        print("exceed category list")
+                        self.change_table[k].append(w)
+                    elif (self.prev_table[k][i] != w):
+                        self.change_table[k].append(w)
+                        
 
-    #categorize(self,data)
-    #param self
-    #param list of dict 
-    def categorize(self,data):
-        a = m = 0.0
-        for d in data:
-            c = self.get(d["Description"]) 
-            if c :
-                a += 1
-                self.add(c,d["Description"])
-            else :
-                m += 1
-                c = self.prompt_user("What is this %s ? " % d["Description"] ) 
-                self.add(c,d["Description"])
-        print( "Sucess rate %" + str((a/(a +m ))*100))
-        self.load_to_db()
+
+
+    def categorize(self,unknown):
+        c = self.get(unknown) 
+        if c :
+            self.hit += 1
+            self.add(c,unknown)
+        else :
+            self.miss += 1
+            c = self.prompt_user("What is this %s ? " % unknown ) 
+            self.add(c,unknown)
+        return c
 
     def add(self,category,phrase):
         w_phrase = [w_string(x,0) for x in phrase.split(' ')]
         if category in self.table:
-            print("merging")
             self._merge(category, w_phrase)
         else:
             self.table[category] =  w_phrase
-        self._sort()
 
     def get(self,phrase):
         scores = [self._score(phrase,k) for k in self.table.keys()]
-        if scores and  (max(scores) >= WTHRESHOLD ): 
+        print("{} got scores {} for categories {}".format(phrase, scores,self.table.keys() )) 
+        if scores and  (max(scores) > WTHRESHOLD ): 
             index = scores.index(max(scores))
             return list(self.table.keys())[index]
         else:
@@ -142,13 +173,11 @@ class Categories :
            s = ws.string
            try :
                index = ss.index(s)
-               print ("collision")
                self.table[category][index].incr_w()
            except ValueError:
                self.table[category].append(ws)
 
     
-#TODO implement a weighting function
 
 if __name__ == "__main__":
     #Execute tests on weight string object
