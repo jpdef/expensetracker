@@ -1,0 +1,20 @@
+<!doctype html>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<title>Welcome</title>
+<h1><center> {{ title }}  </center></h1>
+<table width=100%, border=solid, padding=15px>
+
+<tr>
+{% for cell_key,cell_value in table[0].items() %}
+<th>{{cell_key}}</th>
+{% endfor %}
+</tr>
+
+{% for row in table %}
+<tr>
+{% for cell_key,cell_value in row.items() %}
+<td>{{cell_value}}</td>
+{% endfor %}
+</tr>
+{% endfor %}
+</table>
