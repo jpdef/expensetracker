@@ -19,7 +19,8 @@ class Table:
         self.insert_str = "INSERT INTO "   + self.tablename + " VALUES ("+ names  + ")"
         self.get_str    = "SELECT * FROM " + self.tablename + " WHERE %s"
         self.get_all_str= "SELECT * FROM " + self.tablename
-        self.update_str = "UPDATE " + self.tablename + " SET {} WHERE {}" 
+        self.update_str = "UPDATE " + self.tablename + " SET {} WHERE {}"
+        self.add_col_str    = "ALTER TABLE" + self.tablename + " ADD %s %s" 
    
 
     def update(self,values, conditions):
@@ -49,11 +50,17 @@ class Table:
         column_name = row.keys()
         query = self.get_str % " and ".join([cn+"=:"+cn for cn in column_name])
         self.dbman.execute(query, row )
-        return self.dbman.cur.fetchone()
+        return self.dbman.cur.fetchall()
+
+    def add_column(self,column):
+        query = self.add_col_str % (column['name'], column['type'])
+        self.dbman.execute(query)
+
 
 class DBManager:
     def __init__(self):
         #Connect to database
+        print(os.environ['DATABASEPATH'])
         self.con = sqlite3.connect(os.environ['DATABASEPATH'])
         self.cur = self.con.cursor()
         
@@ -132,13 +139,18 @@ class DBManager:
     
     def get_all(self,tablename):
         try:
-           if self.tables[tablename]:
-              return self.tables[tablename].get_all()
-           else:
-              print("No such tablename : %s" % tablename)
+            if tablename in self.tables:
+               return self.tables[tablename].get_all()
+        except KeyError:
+             print("No such tablename : %s" % tablename)
         except sqlite3.Error as E:
             print("DBManager get sqlite error:" + str(E))
-
+    
+    def add_column(self,tablename,column):
+        try:
+            self.tables[tablename].add_column(column)
+        except sqlite3.Error as E:
+            print("DBManager get sqlite error:" + str(E))
         
 #Tests
 if __name__ == "__main__":

@@ -1,9 +1,8 @@
 <!doctype html>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-<title>Welcome</title>
 <h1><center> {{ title }}  </center></h1>
 <ul>
 {% for o in options %}
-<li><a href=/expenses/table/{{o}}>{{o}}</a></li>
+<li><a href={{o[0]}}>{{o[1]}}</a></li>
 {% endfor %}
 </ul>
