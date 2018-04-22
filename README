@@ -1,4 +1,3 @@
-# Webclassify
-Goal: Create programs that properly classifies data. Classifcation is initially defined by user input. Program uses initial input to predict future classifications. 
+# Scribe
+Flask application, web interface for abitrary data storage.
 
-Approach: Each input has an associated weight. The weight is a measurement of the the input data with its classification. The program predicts the classifcation of new input using the previous weighted inputs.
