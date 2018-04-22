@@ -15,12 +15,13 @@ class Table:
         names        = ', '.join([ ":"+c['name'] for c in self.columns])
         placeholders = ', '.join([ '?' for x in range(len(self.columns))])
         formatters   = ', '.join([ '%s' for x in range(len(self.columns))])
-        self.create_str = "CREATE TABLE %s ("+ formatters  + ")"
-        self.insert_str = "INSERT INTO "   + self.tablename + " VALUES ("+ names  + ")"
-        self.get_str    = "SELECT * FROM " + self.tablename + " WHERE %s"
-        self.get_all_str= "SELECT * FROM " + self.tablename
-        self.update_str = "UPDATE " + self.tablename + " SET {} WHERE {}"
-        self.add_col_str    = "ALTER TABLE" + self.tablename + " ADD %s %s" 
+        self.create_str   = "CREATE TABLE %s ("+ formatters  + ")"
+        self.insert_str   = "INSERT INTO "   + self.tablename + " VALUES ("+ names  + ")"
+        self.get_str      = "SELECT * FROM " + self.tablename + " WHERE %s"
+        self.get_all_str  = "SELECT * FROM " + self.tablename
+        self.update_str   = "UPDATE " + self.tablename + " SET {} WHERE {}"
+        self.add_col_str  = "ALTER TABLE " + self.tablename + " ADD %s %s"
+        self.delete_str   = "DELETE FROM " + self.tablename + " WHERE {}"
    
 
     def update(self,values, conditions):
@@ -41,6 +42,11 @@ class Table:
             self.dbman.execute(self.insert_str , row)
 
 
+    def delete(self,conditions):
+        query = self.delete_str.format(" and ".join([k+"=:"+k for k in conditions.keys()]))
+        self.dbman.execute(query, conditions)
+
+
     def get_all(self):
         self.dbman.cur.execute(self.get_all_str)
         data =  self.dbman.cur.fetchall()
@@ -50,10 +56,12 @@ class Table:
         column_name = row.keys()
         query = self.get_str % " and ".join([cn+"=:"+cn for cn in column_name])
         self.dbman.execute(query, row )
-        return self.dbman.cur.fetchall()
+        data =  self.dbman.cur.fetchall()
+        return ( [ dict(zip([c['name'] for c in self.columns],d)) for d in data] )
 
     def add_column(self,column):
         query = self.add_col_str % (column['name'], column['type'])
+        print(query)
         self.dbman.execute(query)
 
 
@@ -91,7 +99,7 @@ class DBManager:
     def get_columns(self,tablename):
         self.cur.execute("PRAGMA table_info(%s);" % tablename)
         return [x[1] for x in self.cur.fetchall()]
- 
+
     def execute(self,query,args=None):
         try:
             if args is not None:
@@ -127,6 +135,18 @@ class DBManager:
 
         except sqlite3.Error as E:
             print("DBManager get sqlite error:" + str(E))
+
+    def delete(self,tablename,conditions):
+          try:
+              with self.con: 
+                if tablename in self.tables.keys():
+                    self.tables[tablename].delete(conditions)
+                else:
+                    print("No such tablename : %s" % tablename)
+
+          except sqlite3.Error as E:
+              print("DBManager get sqlite error:" + str(E))
+
 
     def get(self,tablename,row):
         try:
