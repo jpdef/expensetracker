@@ -1,0 +1,10 @@
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<form action="{{action}}" method="post">
+  {%for o in options%}
+  <div class="form-group">
+  <label>{{o}}:</label>
+  <input type="text" name={{o}} class="form-control">
+  {%endfor%}
+  </div>
+  <button type="submit" class="btn btn-default">Submit</button>
+</form>

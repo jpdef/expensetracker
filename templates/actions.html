@@ -1,0 +1,6 @@
+<!doctype html>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<h1><center> {{ title }}  </center></h1>
+{% for o in options %}
+<a href={{o[0]}} class="btn btn-primary">{{o[1]}}</a>
+{% endfor %}
